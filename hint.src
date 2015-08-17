@@ -1,0 +1,72 @@
+00100           ORG               7000H
+00110 START     CALL              01C9H
+00120           LD                A,2
+00130           LD                (4214H),A
+00140           LD                (401CH),A
+00150           JP                MESS
+00160 BEGIN     JP                CLEAR
+00170           READ              LD B,0FEH
+00180           LD                HL,7200H
+00190           CALL              40H
+00200           CALL              LINE
+00210           CALL              SCRAM
+00220           LD                A,0DH
+00230           CALL              33H
+00240           JP                BEGIN
+00250 SCRAM     LD                A,(HL)
+00260           CP                0DH
+00270           JR                Z,PRNT
+00280           CP                00H
+00290           JR                Z,BEGIN
+00300           CP                3FH
+00310           JR                Z,DOS
+00320           CP                97
+00330           JR                NC,LCASE
+00340           CP                64
+00350           JR                NC,MULT
+00360           LD                (HL),A
+00370           INC               HL
+00380           JP                SCRAM
+00390 DOS       LD                SP,409FH
+00400           JP                402DH
+00410 MULT      LD                E,A
+00420           LD                A,155
+00430           JP                NEXT
+00440 LCASE     LD                E,A
+00450           LD                A,219
+00460 NEXT      SUB               E
+00470           LD                (HL),A
+00480           INC               HL
+00490           JP                SCRAM
+00500 PRNT      LD                HL,7200H
+00510           CALL              021BH
+00520           RET
+00530 CLEAR     LD                HL,7200H
+00540           LD                DE,7201H
+00550           LD                BC,0FEH
+00560           LD                (HL),00H
+00570           LDIR
+00580           JP                READ
+00590 MESS      LD                HL,TITLE
+00600           CALL              021BH
+00610           LD                HL,COPY
+00620           CALL              021BH
+00630           LD                A,0DH
+00640           CALL              33H
+00650           JP                BEGIN
+00660 TITLE     DEFM              'Decoder/Encoder for Softside Adventure Hints'
+00670           DEFB              0AH
+00680           DEFM              'Enter ? to return to DOS.'
+00690           DEFB              0DH
+00700 COPY      DEFM              'Version 1.7 - June 4, 1983'
+00710           DEFB              0AH
+00720           DEFM              'Copyright 1983, Timnet Inc.'
+00730           DEFB              0DH
+00740 LIN       LD                HL,DASH
+00750           CALL              021BH
+00760           LD                HL,7200H
+00770           RET
+00780 DASH      DEFM '------------------------------------------- --------------------'
+00790           DEFB              0DH
+00800           END               START
+               
