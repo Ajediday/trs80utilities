@@ -1,0 +1,148 @@
+                    Model III Trsdos
+-----------------------------------------------------------
+  1) The GAT Sector (Track 17, Sector 1).
+        The GAT sector is used to keep track space on the
+     disk, flawed tracks, the disk password, the disk name
+     and date, and contains the Auto Command File. Here is
+     how the sector is set up:
+
+             Bytes             Use
+             -----   --------------------------
+             00-27H   Granule Allocation Table
+             28-5FH   Unused
+             60-87H   Track Lockout Table
+             88-BFH   Unused
+             C0-CDH   Unknown
+             CE,CFH   Disk Master Password
+             D0-DFH   Disk Name and Date
+             E0-FFH   Auto Command File
+
+    The Gat entries are based on 6 bits of information,
+       each bit represents 1 granule.
+
+              Bit=>  7 6 5 4 3 2 1 0
+             Gran=>      6 5 4 3 2 1
+    If a entry of FFH appears in the Track Lockout Table
+       it means that that track is locked out.
+-----------------------------------------------------------
+ 2) The HIT Sector (Track 17, Sector 2).
+       The HIT sector keeps track of where the files are
+    located in the directory. Each byte represents a
+    location in the directory, Bytes 00-4FH are used for
+    normal files. Bytes E0-FFH are used for TRSDOS's system
+    files.
+-----------------------------------------------------------
+ 3) The Directory (Track 17, Sectors 3-18)
+       This is where the major information about each
+    file is stored. Each sector can have 5 entries on it,
+    each taking 48 bytes. Here is the format for a entry:
+
+           Byte     Meaning
+           ----  -------------------------------------
+           00H   File Type=>  Bit 7:  unused
+                              Bit 6:  1=System File
+                              Bit 5:  1=Backup Protected
+                                       (More on this later)
+                              Bit 4:  1=File exists in HIT
+                                        sector.
+                              Bit 3:  1=invisible file
+                           Bits 2-0:  Protection level
+           1-2H  Month and Year (in hex)
+            3H   EOF byte
+            4H   LRL of file
+           5-CH  File name padded with blanks on the right
+           D-FH  Extension 
+         10-11H  Update password (2-byte hash code)
+         12-13H  Access password (2-byte hash code)
+         14-15H  EOF Relative Sector
+                   If the EOF byte is zero, then this byte
+                 is the relative sector count of the file;
+                 if it is non-zero then it is the relative
+                 count plus one.
+         16-2FH  13 2 byte pairs specifying extents:
+                 1st byte: if FFH, signifies end of extents
+                           if 0-29H, track on disk where 
+                           this entry starts.
+                 2nd byte: I am not sure how the first
+                           4 bits are used
+                           Bits 0-4: number of grans
+                           assigned to this extent.
+-----------------------------------------------------------
+                  Where TRSDOS is on the disk.
+-----------------------------------------------------------
+  *  Loc. Track,Sector         Contents
+-----------------------------------------------------------
+  0  0500   0,1-0,15      Boot sector and Start up program
+  1  0210   16,1-16,5     DOS commands and LIB command
+  2  4210   16,7-16,10    Append,Attrib,Relo
+  3  8310   16,13-16,15   Basic Save and Kill
+  4  A110   16,16-16,18   DOS errors and ERROR command
+  5  A300   0,16-1,5      Debug
+  6  0612   18,1-18,17    Build,Dir,Date,Do,Dump,Clock,
+                          Create,Clear,Time,Auto,Pause,
+                          Rename,Free,Prot,Load
+  7  4601   1,7-2,4       Backup and Format
+  8  0613   19,1-19,18    Help
+  9  0514   20,1-20,15    Copy,Kill,Patch,Route,Setcom,
+                          Dual,Wp,Forms,Master
+ 10  020F   15,1-15,4     CMD"D" and Basic errors
+ 11  A414   20,16-21,7    Tape,List,Purge
+ 12  420F   15,7-15,10    Name and CMD"C"
+ 13  820F   15,13-15,16   CMD"X" and CMD"J"
+ 14  6115   21-10-21,11   ??????????????????
+-----------------------------------------------------------
+                      Backup Protection
+-----------------------------------------------------------
+    The backup protection on programs like Zork from
+Radio Shack can be easy to remove or bypass. To remove
+the protection from the disk you need a Zap-type program
+like Super Utility Plus. On Track 0, Sector 1 (The boot
+sector) Byte 22H, this byte should be 00, change it to
+FF. This will let you backup the disk without worry of a
+limit.
+    The other way to get around the protection is to modify
+the backup program. Since the program checks Bit 5 of the 
+file type to see if it set for protection, the program can
+be made to look a Bit 7 which is always 0. The following
+patch will do that:
+             PATCH *7 (ADD=532E,FIND=6E,CHG=7E)
+
+    Once you have made the backup copy using the patch, you
+will still have problems with passwords and the protection
+will still be there. To solve this you can use the XFERSYS
+program to copy the programs to a data disk, the copied
+programs on the data disk will have no update password,
+will be visable and will have the protection bit set to
+0. If the programs access other files that are protected
+by passwords, this must be fix by the user(*). Here is the
+set of patches for XFERSYS:
+      PATCH XFERSYS/CMD (ADD=5377,FIND=3600,CHG=36EF)
+      PATCH XFERSYS/CMD (ADD=537A,FIND=3600,CHG=365C)
+      PATCH XFERSYS/CMD (ADD=536F,FIND=7EF64E,CHG=7E0000)
+      PATCH XFERSYS/CMD (ADD=52B3,FIND=76,CHG=6E)
+
+   The first two patches change the update password to
+no password (8 spaces), the next patch changes the file's
+protection level and status. The last patch causes XFERSYS
+to look at Bit 5. If you do not use the last patch all the
+system files will be copied to the disk and they will have
+no protection. Also you can cause the XFERSYS program to
+copy all the files on the disk (CHG=66) or all invisible
+files on a disk (CHG=5E).
+-----------------------------------------------------------
+      All of this information is correct to the best of my
+knowledge and should work on all versions of TRSDOS 1.3. If
+anything is wrong or incorrect, tell me.
+-----------------------------------------------------------
+ Sources of Information and usefull programs
+   TRS-80 Assembly Language by Hubert S. Howe Jr.
+   Prentice-Hall, Inc.  $9.95
+------------------------------------------------
+   Super Utility Plus By Kim Watt
+   Powersoft, $40 (Version 2.2z)-$79 (Version 3.0)
+-----------------------------------------------------------
+ (*) If the first two patches are changed to read:
+     PATCH XFERSYS/CMD (ADD=5377,FIND=3600,CHG=0000)
+     PATCH XFERSYS/CMD (ADD=537A,FIND=3600,CHG=0000)
+The passwords from the program will stay the same.
+          
